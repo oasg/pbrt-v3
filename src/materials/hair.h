@@ -53,6 +53,7 @@ http://pbrt.org/hair.pdf for a description of the implementation here.
 
 namespace pbrt {
 
+
 // HairMaterial Declarations
 class HairMaterial : public Material {
   public:
@@ -104,7 +105,7 @@ class HairBSDF : public BxDF {
     static Spectrum SigmaAFromConcentration(Float ce, Float cp);
     static Spectrum SigmaAFromReflectance(const Spectrum &c, Float beta_n);
 
-  private:
+  protected:  //share data with MHairMaterial friend class
     // HairBSDF Private Methods
     std::array<Float, pMax + 1> ComputeApPdf(Float cosThetaO) const;
 
@@ -118,7 +119,6 @@ class HairBSDF : public BxDF {
 };
 
 // General Utility Functions
-inline Float Sqr(Float v) { return v * v; }
 template <int n>
 static Float Pow(Float v) {
     static_assert(n > 0, "Power can't be negative");
@@ -169,6 +169,108 @@ static Point2f DemuxFloat(Float f) {
     uint32_t bits[2] = {Compact1By1(v), Compact1By1(v >> 1)};
     return {bits[0] / Float(1 << 16), bits[1] / Float(1 << 16)};
 }
+//move some utility function to the header file
+// to share with my own hair material
+// and this utility function could only build once
+inline Float Sqr(Float v) { return v * v; }
+  inline Float I0(Float x) {
+    Float val = 0;
+    Float x2i = 1;
+    int64_t ifact = 1;
+    int i4 = 1;
+    // I0(x) \approx Sum_i x^(2i) / (4^i (i!)^2)
+    for (int i = 0; i < 10; ++i) {
+        if (i > 1) ifact *= i;
+        val += x2i / (i4 * Sqr(ifact));
+        x2i *= x * x;
+        i4 *= 4;
+    }
+    return val;
+}
+inline Float Phi(int p, Float gammaO, Float gammaT) {
+    return 2 * p * gammaT - 2 * gammaO + p * Pi;
+}
+
+inline Float Logistic(Float x, Float s) {
+    x = std::abs(x);
+    return std::exp(-x / s) / (s * Sqr(1 + std::exp(-x / s)));
+}
+
+inline Float LogisticCDF(Float x, Float s) {
+    return 1 / (1 + std::exp(-x / s));
+}
+
+inline Float TrimmedLogistic(Float x, Float s, Float a, Float b) {
+    CHECK_LT(a, b);
+    return Logistic(x, s) / (LogisticCDF(b, s) - LogisticCDF(a, s));
+}
+static std::array<Spectrum, pMax + 1> Ap(Float cosThetaO, Float eta, Float h,
+                                         const Spectrum &T) {
+    std::array<Spectrum, pMax + 1> ap;
+    // Compute $p=0$ attenuation at initial cylinder intersection
+    Float cosGammaO = SafeSqrt(1 - h * h);
+    Float cosTheta = cosThetaO * cosGammaO;
+    Float f = FrDielectric(cosTheta, 1.f, eta);
+    ap[0] = f;
+
+    // Compute $p=1$ attenuation term
+    ap[1] = Sqr(1 - f) * T;
+
+    // Compute attenuation terms up to $p=_pMax_$
+    for (int p = 2; p < pMax; ++p) ap[p] = ap[p - 1] * T * f;
+
+    // Compute attenuation term accounting for remaining orders of scattering
+    ap[pMax] = ap[pMax - 1] * f * T / (Spectrum(1.f) - T * f);
+    return ap;
+}
+inline Float LogI0(Float x) {
+    if (x > 12)
+        return x + 0.5 * (-std::log(2 * Pi) + std::log(1 / x) + 1 / (8 * x));
+    else
+        return std::log(I0(x));
+}
+static Float Mp(Float cosThetaI, Float cosThetaO, Float sinThetaI,
+                Float sinThetaO, Float v) {
+    Float a = cosThetaI * cosThetaO / v;
+    Float b = sinThetaI * sinThetaO / v;
+    Float mp =
+        (v <= .1)
+            ? (std::exp(LogI0(a) - b - 1 / v + 0.6931f + std::log(1 / (2 * v))))
+            : (std::exp(-b) * I0(a)) / (std::sinh(1 / v) * 2 * v);
+    CHECK(!std::isinf(mp) && !std::isnan(mp));
+    return mp;
+}
+inline Float Np(Float phi, int p, Float s, Float gammaO, Float gammaT) {
+    Float dphi = phi - Phi(p, gammaO, gammaT);
+    // Remap _dphi_ to $[-\pi,\pi]$
+    while (dphi > Pi) dphi -= 2 * Pi;
+    while (dphi < -Pi) dphi += 2 * Pi;
+    return TrimmedLogistic(dphi, s, -Pi, Pi);
+}
+
+
+
+
+
+static Float SampleTrimmedLogistic(Float u, Float s, Float a, Float b) {
+    CHECK_LT(a, b);
+    Float k = LogisticCDF(b, s) - LogisticCDF(a, s);
+    Float x = -s * std::log(1 / (u * k + LogisticCDF(a, s)) - 1);
+    CHECK(!std::isnan(x));
+    return Clamp(x, a, b);
+}
+// Hair Local Declarations
+inline Float I0(Float x), LogI0(Float x);
+
+// Hair Local Functions
+
+
+
+
+
+
+
+
 
 }  // namespace pbrt
 

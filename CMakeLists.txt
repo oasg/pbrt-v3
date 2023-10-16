@@ -462,9 +462,12 @@ FILE ( GLOB PBRT_SOURCE
   src/textures/*
   src/media/*
   )
+FILE (GLOB TABLE_SOURCE 
+"table/*")
 
 INCLUDE_DIRECTORIES ( src )
 INCLUDE_DIRECTORIES ( src/core )
+INCLUDE_DIRECTORIES ( table )
 
 # Visual Studio source folders
 SOURCE_GROUP (core REGULAR_EXPRESSION src/core/.*)
@@ -488,6 +491,7 @@ ADD_LIBRARY ( pbrt STATIC
   ${PBRT_CORE_SOURCE}
   ${PBRT_CORE_HEADERS}
   ${PBRT_SOURCE}
+  ${TABLE_SOURCE}
   )
 ADD_SANITIZERS ( pbrt )
 

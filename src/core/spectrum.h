@@ -412,6 +412,7 @@ class SampledSpectrum : public CoefficientSpectrum<nSpectralSamples> {
     }
     SampledSpectrum(const RGBSpectrum &r,
                     SpectrumType type = SpectrumType::Reflectance);
+    static SampledSpectrum& get_rgbIllum2SpectWhite (){return rgbIllum2SpectWhite;}
 
   private:
     // SampledSpectrum Private Data

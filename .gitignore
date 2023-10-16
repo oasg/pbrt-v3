@@ -3,3 +3,8 @@ src/build
 src/bin
 src/objs
 .sconsign.dblite
+build
+scenes/hair
+settings.json
+.DS_Store
+

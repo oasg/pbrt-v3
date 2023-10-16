@@ -115,6 +115,9 @@
 #include "media/grid.h"
 #include "media/homogeneous.h"
 
+//my own material
+#include"materials/mhair.h"
+
 #include <map>
 #include <stdio.h>
 
@@ -586,6 +589,9 @@ std::shared_ptr<Material> MakeMaterial(const std::string &name,
         material = CreateKdSubsurfaceMaterial(mp);
     else if (name == "fourier")
         material = CreateFourierMaterial(mp);
+    else if(name == "mhair"){
+        material = CreateMHairMaterial(mp);
+    }
     else {
         Warning("Material \"%s\" unknown. Using \"matte\".", name.c_str());
         material = CreateMatteMaterial(mp);
