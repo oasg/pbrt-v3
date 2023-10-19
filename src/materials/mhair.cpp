@@ -110,6 +110,7 @@ MHairMaterial *CreateMHairMaterial(const TextureParams &mp) {
 MHairBSDF::MHairBSDF(Float h, Float eta, const Spectrum &sigma_a, Float beta_m,
                      Float beta_n, Float alpha):HairBSDF(h,eta,sigma_a,beta_m,beta_n,alpha) {}
 Spectrum MHairBSDF::f(const Vector3f &wo, const Vector3f &wi) const {
+    
 
         // Compute hair coordinate system terms related to _wo_
     Float sinThetaO = wo.x;
@@ -147,6 +148,15 @@ Spectrum MHairBSDF::f(const Vector3f &wo, const Vector3f &wi) const {
     if(ot < 0){
         ot = ot + 90;
     }
+    // use angle in azimuthal
+    int phiI_ang = static_cast<int>(std::abs((std ::round( phiI * 180 / Pi))));
+    int phiO_ang = static_cast<int>(std::abs((std ::round(phiO * 180 / Pi))));
+    if (phiI_ang > 90) {
+        phiI_ang = phiI_ang - 90;
+    }
+    if (phiO_ang < 0) {
+        phiO_ang = phiO_ang + 90;
+    }
 
     // Compute the transmittance _T_ of a single path through the cylinder
     Spectrum T = Exp(-sigma_a * (2 * cosGammaT / cosThetaT));
@@ -157,24 +167,22 @@ Spectrum MHairBSDF::f(const Vector3f &wo, const Vector3f &wi) const {
     Spectrum fsum(0.);
     //for p = 0
     // samplize the table
-    RGBSpectrum RN(0.);
+    SampledSpectrum RN(0.);
     for(int i =0;i<60;++i){
-                RN[i] = BRDFTABLE5[it][ot][i]/2.5;
-                RN[i] *= SampledSpectrum::get_rgbIllum2SpectWhite()[i];
+        RN[i] = BRDFTABLE5[phiI_ang][phiO_ang][i] / 2.5;
+        RN[i] *= SampledSpectrum::get_rgbIllum2SpectWhite()[i];
     }
-    fsum+=RN.ToRGBSpectrum();
-
-    // p >1
+    Float sinThetaOp, cosThetaOp;
+    // Compute $\sin \thetao$ and $\cos \thetao$ terms accounting for scales
+    sinThetaOp = sinThetaO * cos2kAlpha[1] - cosThetaO * sin2kAlpha[1];
+    cosThetaOp = cosThetaO * cos2kAlpha[1] + sinThetaO * sin2kAlpha[1];
+    //compute p =0 
+    fsum += Mp(cosThetaI, cosThetaOp, sinThetaI, sinThetaOp, v[0]) * ap[0]*RN.ToRGBSpectrum();
+    //fsum += RN.ToRGBSpectrum();
+    // p >=1
     for (int p = 1; p < pMax; ++p) {
-        // Compute $\sin \thetao$ and $\cos \thetao$ terms accounting for scales
-        Float sinThetaOp, cosThetaOp;
-        if (p == 0) {
-            sinThetaOp = sinThetaO * cos2kAlpha[1] - cosThetaO * sin2kAlpha[1];
-            cosThetaOp = cosThetaO * cos2kAlpha[1] + sinThetaO * sin2kAlpha[1];
-        }
-
         // Handle remainder of $p$ values for hair scale tilt
-        else if (p == 1) {
+        if (p == 1) {
             sinThetaOp = sinThetaO * cos2kAlpha[0] + cosThetaO * sin2kAlpha[0];
             cosThetaOp = cosThetaO * cos2kAlpha[0] - sinThetaO * sin2kAlpha[0];
         } else if (p == 2) {
@@ -197,5 +205,35 @@ Spectrum MHairBSDF::f(const Vector3f &wo, const Vector3f &wi) const {
     if (AbsCosTheta(wi) > 0) fsum /= AbsCosTheta(wi);
     CHECK(!std::isinf(fsum.y()) && !std::isnan(fsum.y()));
     return fsum;
+}
+void MHairMaterial::ComputeScatteringFunctions(SurfaceInteraction *si,
+                                               MemoryArena &arena,
+                                               TransportMode mode,
+                                               bool allowMultipleLobes) const {
+    Float bm = beta_m->Evaluate(*si);
+    Float bn = beta_n->Evaluate(*si);
+    Float a = alpha->Evaluate(*si);
+    Float e = eta->Evaluate(*si);
+
+    si->bsdf = ARENA_ALLOC(arena, BSDF)(*si, e);
+
+    Spectrum sig_a;
+    if (sigma_a)
+        sig_a = sigma_a->Evaluate(*si).Clamp();
+    else if (color) {
+        Spectrum c = color->Evaluate(*si).Clamp();
+        sig_a = MHairBSDF::SigmaAFromReflectance(c, bn);
+    } else {
+        CHECK(eumelanin || pheomelanin);
+        sig_a = MHairBSDF::SigmaAFromConcentration(
+            std::max(Float(0), eumelanin ? eumelanin->Evaluate(*si) : 0),
+            std::max(Float(0), pheomelanin ? pheomelanin->Evaluate(*si) : 0));
+    }
+
+    // Offset along width
+    Float h = -1 + 2 * si->uv[1];
+    si->bsdf->Add(ARENA_ALLOC(arena, MHairBSDF)(h, e, sig_a, bm, bn, a));
+
+    
 }
 }  // namespace pbrt

@@ -78,7 +78,7 @@ class HairMaterial : public Material {
                                     TransportMode mode,
                                     bool allowMultipleLobes) const;
 
-  private:
+  protected:
     // HairMaterial Private Data
     std::shared_ptr<Texture<Spectrum>> sigma_a, color;
     std::shared_ptr<Texture<Float>> eumelanin, pheomelanin, eta;

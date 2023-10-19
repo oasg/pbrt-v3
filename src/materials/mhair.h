@@ -67,7 +67,9 @@ class MHairMaterial : public HairMaterial {
                  const std::shared_ptr<Texture<Float>> &beta_n,
                  const std::shared_ptr<Texture<Float>> &alpha)
         : HairMaterial(sigma_a, color, eumelanin, pheomelanin, eta, beta_m,beta_n,alpha) {}
-
+    void ComputeScatteringFunctions(SurfaceInteraction *si, MemoryArena &arena,
+                                    TransportMode mode,
+                                    bool allowMultipleLobes) const;
   private:
     // MHairMaterial Private Data
 
