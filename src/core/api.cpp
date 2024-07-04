@@ -590,6 +590,7 @@ std::shared_ptr<Material> MakeMaterial(const std::string &name,
     else if (name == "fourier")
         material = CreateFourierMaterial(mp);
     else if(name == "mhair"){
+        
         material = CreateMHairMaterial(mp);
     }
     else {

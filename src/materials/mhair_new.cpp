@@ -237,7 +237,15 @@ void MHairMaterial::ComputeScatteringFunctions(SurfaceInteraction *si,
     
 }
 hairSimBrdf::hairSimBrdf(const char *file) {
+    m_data = new Float[180*90*3];
     //read from file
+    std::ifstream infile("../table/Colordata_normal.txt");
+    if(!infile.open()){
 
+    }
+    float a,b,c;
+    while(infile >> a>>b>>c){
+
+    }
 }
 }  
