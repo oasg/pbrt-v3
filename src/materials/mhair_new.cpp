@@ -31,11 +31,11 @@
  */
 
 // materials/hair.cpp*
-#include "materials/mhair.h"
+#include "materials/mhair_new.h"
 
 #include <array>
 #include <numeric>
-
+#include <fstream>
 #include "interaction.h"
 #include "mhair.h"
 #include "paramset.h"
@@ -51,7 +51,7 @@
 //#include"../table/brdf_hkck5.h"//キューティクル欠け+剥落
 
 namespace pbrt {
-MHairMaterial *CreateMHairMaterial(const TextureParams &mp) {
+MHairNewMaterial *CreateMHairNewMaterial(const TextureParams &mp) {
     std::shared_ptr<Texture<Spectrum>> sigma_a =
         mp.GetSpectrumTextureOrNull("sigma_a");
     std::shared_ptr<Texture<Spectrum>> color =
@@ -104,12 +104,14 @@ MHairMaterial *CreateMHairMaterial(const TextureParams &mp) {
     std::shared_ptr<Texture<Float>> beta_n = mp.GetFloatTexture("beta_n", 0.3f);
     std::shared_ptr<Texture<Float>> alpha = mp.GetFloatTexture("alpha", 2.f);
 
-    return new MHairMaterial(sigma_a, color, eumelanin, pheomelanin, eta, beta_m,
+    return new MHairNewMaterial(sigma_a, color, eumelanin, pheomelanin, eta, beta_m,
                             beta_n, alpha);
 }
-MHairBSDF::MHairBSDF(Float h, Float eta, const Spectrum &sigma_a, Float beta_m,
-                     Float beta_n, Float alpha):HairBSDF(h,eta,sigma_a,beta_m,beta_n,alpha) {}
-Spectrum MHairBSDF::f(const Vector3f &wo, const Vector3f &wi) const {
+MHairNewBSDF::MHairNewBSDF(Float h, Float eta, const Spectrum &sigma_a, Float beta_m,
+                     Float beta_n, Float alpha):HairBSDF(h,eta,sigma_a,beta_m,beta_n,alpha) {
+                        m_sim_brdf = std::unique_ptr(new hairSimBrdf("../table/Colordata_normal.txt"));
+                     }
+Spectrum MHairNewBSDF::f(const Vector3f &wo, const Vector3f &wi) const {
     
 
         // Compute hair coordinate system terms related to _wo_
@@ -148,15 +150,15 @@ Spectrum MHairBSDF::f(const Vector3f &wo, const Vector3f &wi) const {
     if(ot < 0){
         ot = ot + 90;
     }
-    // use angle in azimuthal
-    int phiI_ang = static_cast<int>(std::abs((std ::round( phiI * 180 / Pi))));
-    int phiO_ang = static_cast<int>(std::abs((std ::round(phiO * 180 / Pi))));
-    if (phiI_ang > 90) {
-        phiI_ang = phiI_ang - 90;
-    }
-    if (phiO_ang < 0) {
-        phiO_ang = phiO_ang + 90;
-    }
+    // // use angle in azimuthal
+    // int phiI_ang = static_cast<int>(std::abs((std ::round( phiI * 180 / Pi))));
+    // int phiO_ang = static_cast<int>(std::abs((std ::round(phiO * 180 / Pi))));
+    // if (phiI_ang > 90) {
+    //     phiI_ang = phiI_ang - 90;
+    // }
+    // if (phiO_ang < 0) {
+    //     phiO_ang = phiO_ang + 90;
+    // }
 
     // Compute the transmittance _T_ of a single path through the cylinder
     Spectrum T = Exp(-sigma_a * (2 * cosGammaT / cosThetaT));
@@ -167,18 +169,20 @@ Spectrum MHairBSDF::f(const Vector3f &wo, const Vector3f &wi) const {
     Spectrum fsum(0.);
     //for p = 0
     // samplize the table
-    SampledSpectrum RN(0.);
-    for(int i =0;i<60;++i){
-        RN[i] = BRDFTABLE5[phiI_ang][phiO_ang][i] / 2.5;
-        RN[i] *= SampledSpectrum::get_rgbIllum2SpectWhite()[i];
-    }
+    // SampledSpectrum RN(0.);
+    // for(int i =0;i<60;++i){
+    //     RN[i] = BRDFTABLE5[it][ot][i] / 2.5;
+    //     RN[i] *= SampledSpectrum::get_rgbIllum2SpectWhite()[i];
+    // }
     Float sinThetaOp, cosThetaOp;
     // Compute $\sin \thetao$ and $\cos \thetao$ terms accounting for scales
     sinThetaOp = sinThetaO * cos2kAlpha[1] - cosThetaO * sin2kAlpha[1];
     cosThetaOp = cosThetaO * cos2kAlpha[1] + sinThetaO * sin2kAlpha[1];
     //compute p =0 
-    fsum += Mp(cosThetaI, cosThetaOp, sinThetaI, sinThetaOp, v[0]) * ap[0]*RN.ToRGBSpectrum();
-    //fsum += RN.ToRGBSpectrum();
+    //fsum += Mp(cosThetaI, cosThetaOp, sinThetaI, sinThetaOp, v[0]) * ap[0]*RN.ToRGBSpectrum();
+    auto rgb = m_sim_brdf->m_data[it][ot];
+    RGBSpectrum reflect(rgb.r,rgb.g,rgb.b);
+    fsum += reflect;
     // p >=1
     for (int p = 1; p < pMax; ++p) {
         // Handle remainder of $p$ values for hair scale tilt
@@ -206,7 +210,7 @@ Spectrum MHairBSDF::f(const Vector3f &wo, const Vector3f &wi) const {
     CHECK(!std::isinf(fsum.y()) && !std::isnan(fsum.y()));
     return fsum;
 }
-void MHairMaterial::ComputeScatteringFunctions(SurfaceInteraction *si,
+void MHairNewMaterial::ComputeScatteringFunctions(SurfaceInteraction *si,
                                                MemoryArena &arena,
                                                TransportMode mode,
                                                bool allowMultipleLobes) const {
@@ -237,15 +241,25 @@ void MHairMaterial::ComputeScatteringFunctions(SurfaceInteraction *si,
     
 }
 hairSimBrdf::hairSimBrdf(const char *file) {
-    m_data = new Float[180*90*3];
+    m_data = std::vector<std::vector<RGB>>(90,std::vector<RGB>(180));
     //read from file
-    std::ifstream infile("../table/Colordata_normal.txt");
-    if(!infile.open()){
-
+    std::ifstream infile(file);
+    if(!infile.is_open()){
+        std::cout<<"can't open file:"<<file<<std::endl;
     }
     float a,b,c;
+    int indeg = 0;
+    int outdeg = 0;
     while(infile >> a>>b>>c){
-
+        if(a==0){
+            indeg++;
+            outdeg = 0;
+        }
+        m_data[indeg][outdeg].r = a;
+        m_data[indeg][outdeg].g = b;
+        m_data[indeg][outdeg].b = c;
+        outdeg++;
     }
+    std::cout<<"gen hair brdf ok!!"<<file<<std::endl;
 }
 }  

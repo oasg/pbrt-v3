@@ -117,6 +117,7 @@
 
 //my own material
 #include"materials/mhair.h"
+#include"materials/mhair_new.h"
 
 #include <map>
 #include <stdio.h>
@@ -590,8 +591,9 @@ std::shared_ptr<Material> MakeMaterial(const std::string &name,
     else if (name == "fourier")
         material = CreateFourierMaterial(mp);
     else if(name == "mhair"){
-        
         material = CreateMHairMaterial(mp);
+    }else if(name == "mhair_new"){
+        material = CreateMHairNewMaterial(mp);
     }
     else {
         Warning("Material \"%s\" unknown. Using \"matte\".", name.c_str());

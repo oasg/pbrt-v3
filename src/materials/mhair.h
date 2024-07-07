@@ -53,13 +53,6 @@ http://pbrt.org/hair.pdf for a description of the implementation here.
 #include "hair.h"
 
 namespace pbrt {
-class hairSimBrdf{
-  public:
-    hairSimBrdf(const char* file);
-    Float getReflect(Float it, Float ot);
-  private:
-    Float* m_data;
-};
 // MHairMaterial Declarations
 class MHairMaterial : public HairMaterial {
   public:

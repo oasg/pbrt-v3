@@ -42,29 +42,35 @@ http://pbrt.org/hair.pdf for a description of the implementation here.
 #pragma once
 #endif
 
-#ifndef PBRT_MATERIALS_MHAIR_H
-#define PBRT_MATERIALS_MHAIR_H
+#ifndef PBRT_MATERIALS_MHAIR_NEW_H
+#define PBRT_MATERIALS_MHAIR_NEW_H
 
 // materials/hair.h*
 #include "material.h"
 #include "pbrt.h"
 #include "reflection.h"
 #include <array>
+#include<vector>
 #include "hair.h"
 
 namespace pbrt {
+struct RGB{
+  Float r;
+  Float g;
+  Float b;
+};
 class hairSimBrdf{
   public:
     hairSimBrdf(const char* file);
+    ~hairSimBrdf(){}
     Float getReflect(Float it, Float ot);
-  private:
-    Float* m_data;
+    std::vector<std::vector<RGB>> m_data;
 };
 // MHairMaterial Declarations
-class MHairMaterial : public HairMaterial {
+class MHairNewMaterial : public HairMaterial {
   public:
     // MHairMaterial Public Methods
-    MHairMaterial(const std::shared_ptr<Texture<Spectrum>> &sigma_a,
+    MHairNewMaterial(const std::shared_ptr<Texture<Spectrum>> &sigma_a,
                  const std::shared_ptr<Texture<Spectrum>> &color,
                  const std::shared_ptr<Texture<Float>> &eumelanin,
                  const std::shared_ptr<Texture<Float>> &pheomelanin,
@@ -81,19 +87,20 @@ class MHairMaterial : public HairMaterial {
 
 };
 
-MHairMaterial *CreateMHairMaterial(const TextureParams &mp);
+MHairNewMaterial *CreateMHairNewMaterial(const TextureParams &mp);
 
 // HairBSDF Declarations
-class MHairBSDF : public HairBSDF {
+class MHairNewBSDF : public HairBSDF {
   public:
     // HairBSDF Public Methods
     // just need the f function
     // pdf and sampled function are inherited
-    MHairBSDF(Float h, Float eta, const Spectrum &sigma_a, Float beta_m,
+    MHairNewBSDF(Float h, Float eta, const Spectrum &sigma_a, Float beta_m,
              Float beta_n, Float alpha);
     Spectrum f(const Vector3f &wo, const Vector3f &wi) const;
 
   private:
+    std::unique_ptr<hairSimBrdf> m_sim_brdf;
     // MHairBSDF Private data
 
 };

@@ -177,8 +177,8 @@ Spectrum MHairBSDF::f(const Vector3f &wo, const Vector3f &wi) const {
     sinThetaOp = sinThetaO * cos2kAlpha[1] - cosThetaO * sin2kAlpha[1];
     cosThetaOp = cosThetaO * cos2kAlpha[1] + sinThetaO * sin2kAlpha[1];
     //compute p =0 
-    fsum += Mp(cosThetaI, cosThetaOp, sinThetaI, sinThetaOp, v[0]) * ap[0]*RN.ToRGBSpectrum();
-    //fsum += RN.ToRGBSpectrum();
+    //fsum += Mp(cosThetaI, cosThetaOp, sinThetaI, sinThetaOp, v[0]) * ap[0]*RN.ToRGBSpectrum();
+    fsum += RN.ToRGBSpectrum();
     // p >=1
     for (int p = 1; p < pMax; ++p) {
         // Handle remainder of $p$ values for hair scale tilt
@@ -235,9 +235,5 @@ void MHairMaterial::ComputeScatteringFunctions(SurfaceInteraction *si,
     si->bsdf->Add(ARENA_ALLOC(arena, MHairBSDF)(h, e, sig_a, bm, bn, a));
 
     
-}
-hairSimBrdf::hairSimBrdf(const char *file) {
-    //read from file
-
 }
 }  
