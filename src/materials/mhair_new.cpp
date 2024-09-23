@@ -109,7 +109,8 @@ MHairNewMaterial *CreateMHairNewMaterial(const TextureParams &mp) {
 }
 MHairNewBSDF::MHairNewBSDF(Float h, Float eta, const Spectrum &sigma_a, Float beta_m,
                      Float beta_n, Float alpha):HairBSDF(h,eta,sigma_a,beta_m,beta_n,alpha) {
-                        m_sim_brdf = std::unique_ptr(new hairSimBrdf("../table/Colordata_normal.txt"));
+    m_sim_brdf = std::unique_ptr<hairSimBrdf>(
+        new hairSimBrdf("../table/Colordata_normal.txt"));
                      }
 Spectrum MHairNewBSDF::f(const Vector3f &wo, const Vector3f &wi) const {
     
@@ -181,7 +182,8 @@ Spectrum MHairNewBSDF::f(const Vector3f &wo, const Vector3f &wi) const {
     //compute p =0 
     //fsum += Mp(cosThetaI, cosThetaOp, sinThetaI, sinThetaOp, v[0]) * ap[0]*RN.ToRGBSpectrum();
     auto rgb = m_sim_brdf->m_data[it][ot];
-    RGBSpectrum reflect(rgb.r,rgb.g,rgb.b);
+    const Float crgb[3] = {rgb.r, rgb.g, rgb.b};
+    RGBSpectrum reflect = RGBSpectrum::FromRGB(crgb);
     fsum += reflect;
     // p >=1
     for (int p = 1; p < pMax; ++p) {
