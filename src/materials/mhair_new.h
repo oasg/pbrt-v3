@@ -51,6 +51,7 @@ http://pbrt.org/hair.pdf for a description of the implementation here.
 #include "reflection.h"
 #include <array>
 #include<vector>
+#include<mutex>
 #include "hair.h"
 
 namespace pbrt {
@@ -66,6 +67,31 @@ class hairSimBrdf{
     Float getReflect(Float it, Float ot);
     std::vector<std::vector<RGB>> m_data;
 };
+class SingBrdf{
+  public:
+  ~SingBrdf(){
+    std::cout<<"sim Brdf destructor!"<<std::endl;
+  }
+  SingBrdf() = delete;
+  SingBrdf& operator=(const SingBrdf&)= delete;
+  static std::shared_ptr<hairSimBrdf> get_Instance(){
+    if(m_instance_ptr==nullptr){
+      std::lock_guard<std::mutex> lk(m_mutex);
+      if(m_instance_ptr==nullptr){
+        m_instance_ptr = std::shared_ptr<hairSimBrdf>(
+          new hairSimBrdf("../table/Colordata_normal.txt"));      
+      }
+    }
+    return m_instance_ptr;
+  }
+  private:
+    static std::shared_ptr<hairSimBrdf> m_instance_ptr;
+    static std::mutex m_mutex;
+    
+};
+
+
+
 // MHairMaterial Declarations
 class MHairNewMaterial : public HairMaterial {
   public:
@@ -100,7 +126,7 @@ class MHairNewBSDF : public HairBSDF {
     Spectrum f(const Vector3f &wo, const Vector3f &wi) const;
 
   private:
-    std::unique_ptr<hairSimBrdf> m_sim_brdf;
+    std::shared_ptr<hairSimBrdf> m_sim_brdf;
     // MHairBSDF Private data
 
 };

@@ -51,6 +51,9 @@
 //#include"../table/brdf_hkck5.h"//キューティクル欠け+剥落
 
 namespace pbrt {
+
+std::mutex SingBrdf::m_mutex;
+std::shared_ptr<hairSimBrdf>  SingBrdf::m_instance_ptr = nullptr;
 MHairNewMaterial *CreateMHairNewMaterial(const TextureParams &mp) {
     std::shared_ptr<Texture<Spectrum>> sigma_a =
         mp.GetSpectrumTextureOrNull("sigma_a");
@@ -109,12 +112,9 @@ MHairNewMaterial *CreateMHairNewMaterial(const TextureParams &mp) {
 }
 MHairNewBSDF::MHairNewBSDF(Float h, Float eta, const Spectrum &sigma_a, Float beta_m,
                      Float beta_n, Float alpha):HairBSDF(h,eta,sigma_a,beta_m,beta_n,alpha) {
-    m_sim_brdf = std::unique_ptr<hairSimBrdf>(
-        new hairSimBrdf("../table/Colordata_normal.txt"));
-                     }
+    m_sim_brdf = SingBrdf::get_Instance();
+    }
 Spectrum MHairNewBSDF::f(const Vector3f &wo, const Vector3f &wi) const {
-    
-
         // Compute hair coordinate system terms related to _wo_
     Float sinThetaO = wo.x;
     Float cosThetaO = SafeSqrt(1 - Sqr(sinThetaO));
@@ -143,6 +143,7 @@ Spectrum MHairNewBSDF::f(const Vector3f &wo, const Vector3f &wi) const {
     auto wi_theta = std::atan2(wi.x, std::sqrt(wi.y * wi.y + wi.z * wi.z));
     auto wi_ang = wi_theta * 180 / Pi;
     int it = std::abs(std::round(wi_ang));
+    
 
     if(it > 90){
         it = it - 90;
@@ -185,31 +186,31 @@ Spectrum MHairNewBSDF::f(const Vector3f &wo, const Vector3f &wi) const {
     const Float crgb[3] = {rgb.r, rgb.g, rgb.b};
     RGBSpectrum reflect = RGBSpectrum::FromRGB(crgb);
     fsum += reflect;
-    // p >=1
-    for (int p = 1; p < pMax; ++p) {
-        // Handle remainder of $p$ values for hair scale tilt
-        if (p == 1) {
-            sinThetaOp = sinThetaO * cos2kAlpha[0] + cosThetaO * sin2kAlpha[0];
-            cosThetaOp = cosThetaO * cos2kAlpha[0] - sinThetaO * sin2kAlpha[0];
-        } else if (p == 2) {
-            sinThetaOp = sinThetaO * cos2kAlpha[2] + cosThetaO * sin2kAlpha[2];
-            cosThetaOp = cosThetaO * cos2kAlpha[2] - sinThetaO * sin2kAlpha[2];
-        } else {
-            sinThetaOp = sinThetaO;
-            cosThetaOp = cosThetaO;
-        }
+    // // p >=1
+    // for (int p = 1; p < pMax; ++p) {
+    //     // Handle remainder of $p$ values for hair scale tilt
+    //     if (p == 1) {
+    //         sinThetaOp = sinThetaO * cos2kAlpha[0] + cosThetaO * sin2kAlpha[0];
+    //         cosThetaOp = cosThetaO * cos2kAlpha[0] - sinThetaO * sin2kAlpha[0];
+    //     } else if (p == 2) {
+    //         sinThetaOp = sinThetaO * cos2kAlpha[2] + cosThetaO * sin2kAlpha[2];
+    //         cosThetaOp = cosThetaO * cos2kAlpha[2] - sinThetaO * sin2kAlpha[2];
+    //     } else {
+    //         sinThetaOp = sinThetaO;
+    //         cosThetaOp = cosThetaO;
+    //     }
 
-        // Handle out-of-range $\cos \thetao$ from scale adjustment
-        cosThetaOp = std::abs(cosThetaOp);
-        fsum += Mp(cosThetaI, cosThetaOp, sinThetaI, sinThetaOp, v[p]) * ap[p] *
-                Np(phi, p, s, gammaO, gammaT);
-    }
+    //     // Handle out-of-range $\cos \thetao$ from scale adjustment
+    //     cosThetaOp = std::abs(cosThetaOp);
+    //     fsum += Mp(cosThetaI, cosThetaOp, sinThetaI, sinThetaOp, v[p]) * ap[p] *
+    //             Np(phi, p, s, gammaO, gammaT);
+    // }
 
-    // Compute contribution of remaining terms after _pMax_
-    fsum += Mp(cosThetaI, cosThetaO, sinThetaI, sinThetaO, v[pMax]) * ap[pMax] /
-            (2.f * Pi);
-    if (AbsCosTheta(wi) > 0) fsum /= AbsCosTheta(wi);
-    CHECK(!std::isinf(fsum.y()) && !std::isnan(fsum.y()));
+    // // Compute contribution of remaining terms after _pMax_
+    // fsum += Mp(cosThetaI, cosThetaO, sinThetaI, sinThetaO, v[pMax]) * ap[pMax] /
+    //         (2.f * Pi);
+    // if (AbsCosTheta(wi) > 0) fsum /= AbsCosTheta(wi);
+    // CHECK(!std::isinf(fsum.y()) && !std::isnan(fsum.y()));
     return fsum;
 }
 void MHairNewMaterial::ComputeScatteringFunctions(SurfaceInteraction *si,
@@ -228,22 +229,22 @@ void MHairNewMaterial::ComputeScatteringFunctions(SurfaceInteraction *si,
         sig_a = sigma_a->Evaluate(*si).Clamp();
     else if (color) {
         Spectrum c = color->Evaluate(*si).Clamp();
-        sig_a = MHairBSDF::SigmaAFromReflectance(c, bn);
+        sig_a = MHairNewBSDF::SigmaAFromReflectance(c, bn);
     } else {
         CHECK(eumelanin || pheomelanin);
-        sig_a = MHairBSDF::SigmaAFromConcentration(
+        sig_a = MHairNewBSDF::SigmaAFromConcentration(
             std::max(Float(0), eumelanin ? eumelanin->Evaluate(*si) : 0),
             std::max(Float(0), pheomelanin ? pheomelanin->Evaluate(*si) : 0));
     }
 
     // Offset along width
     Float h = -1 + 2 * si->uv[1];
-    si->bsdf->Add(ARENA_ALLOC(arena, MHairBSDF)(h, e, sig_a, bm, bn, a));
+    si->bsdf->Add(ARENA_ALLOC(arena, MHairNewBSDF)(h, e, sig_a, bm, bn, a));
 
     
 }
 hairSimBrdf::hairSimBrdf(const char *file) {
-    m_data = std::vector<std::vector<RGB>>(90,std::vector<RGB>(180));
+    m_data = std::vector<std::vector<RGB>>(91,std::vector<RGB>(180));
     //read from file
     std::ifstream infile(file);
     if(!infile.is_open()){

@@ -148,15 +148,6 @@ Spectrum MHairBSDF::f(const Vector3f &wo, const Vector3f &wi) const {
     if(ot < 0){
         ot = ot + 90;
     }
-    // use angle in azimuthal
-    int phiI_ang = static_cast<int>(std::abs((std ::round( phiI * 180 / Pi))));
-    int phiO_ang = static_cast<int>(std::abs((std ::round(phiO * 180 / Pi))));
-    if (phiI_ang > 90) {
-        phiI_ang = phiI_ang - 90;
-    }
-    if (phiO_ang < 0) {
-        phiO_ang = phiO_ang + 90;
-    }
 
     // Compute the transmittance _T_ of a single path through the cylinder
     Spectrum T = Exp(-sigma_a * (2 * cosGammaT / cosThetaT));
@@ -169,7 +160,7 @@ Spectrum MHairBSDF::f(const Vector3f &wo, const Vector3f &wi) const {
     // samplize the table
     SampledSpectrum RN(0.);
     for(int i =0;i<60;++i){
-        RN[i] = BRDFTABLE5[phiI_ang][phiO_ang][i] / 2.5;
+        RN[i] = BRDFTABLE5[it][ot][i] / 2.5;
         RN[i] *= SampledSpectrum::get_rgbIllum2SpectWhite()[i];
     }
     Float sinThetaOp, cosThetaOp;
@@ -179,29 +170,29 @@ Spectrum MHairBSDF::f(const Vector3f &wo, const Vector3f &wi) const {
     //compute p =0 
     //fsum += Mp(cosThetaI, cosThetaOp, sinThetaI, sinThetaOp, v[0]) * ap[0]*RN.ToRGBSpectrum();
     fsum += RN.ToRGBSpectrum();
-    // p >=1
-    for (int p = 1; p < pMax; ++p) {
-        // Handle remainder of $p$ values for hair scale tilt
-        if (p == 1) {
-            sinThetaOp = sinThetaO * cos2kAlpha[0] + cosThetaO * sin2kAlpha[0];
-            cosThetaOp = cosThetaO * cos2kAlpha[0] - sinThetaO * sin2kAlpha[0];
-        } else if (p == 2) {
-            sinThetaOp = sinThetaO * cos2kAlpha[2] + cosThetaO * sin2kAlpha[2];
-            cosThetaOp = cosThetaO * cos2kAlpha[2] - sinThetaO * sin2kAlpha[2];
-        } else {
-            sinThetaOp = sinThetaO;
-            cosThetaOp = cosThetaO;
-        }
+    // // p >=1
+    // for (int p = 1; p < pMax; ++p) {
+    //     // Handle remainder of $p$ values for hair scale tilt
+    //     if (p == 1) {
+    //         sinThetaOp = sinThetaO * cos2kAlpha[0] + cosThetaO * sin2kAlpha[0];
+    //         cosThetaOp = cosThetaO * cos2kAlpha[0] - sinThetaO * sin2kAlpha[0];
+    //     } else if (p == 2) {
+    //         sinThetaOp = sinThetaO * cos2kAlpha[2] + cosThetaO * sin2kAlpha[2];
+    //         cosThetaOp = cosThetaO * cos2kAlpha[2] - sinThetaO * sin2kAlpha[2];
+    //     } else {
+    //         sinThetaOp = sinThetaO;
+    //         cosThetaOp = cosThetaO;
+    //     }
 
-        // Handle out-of-range $\cos \thetao$ from scale adjustment
-        cosThetaOp = std::abs(cosThetaOp);
-        fsum += Mp(cosThetaI, cosThetaOp, sinThetaI, sinThetaOp, v[p]) * ap[p] *
-                Np(phi, p, s, gammaO, gammaT);
-    }
+    //     // Handle out-of-range $\cos \thetao$ from scale adjustment
+    //     cosThetaOp = std::abs(cosThetaOp);
+    //     fsum += Mp(cosThetaI, cosThetaOp, sinThetaI, sinThetaOp, v[p]) * ap[p] *
+    //             Np(phi, p, s, gammaO, gammaT);
+    // }
 
-    // Compute contribution of remaining terms after _pMax_
-    fsum += Mp(cosThetaI, cosThetaO, sinThetaI, sinThetaO, v[pMax]) * ap[pMax] /
-            (2.f * Pi);
+    // // Compute contribution of remaining terms after _pMax_
+    // fsum += Mp(cosThetaI, cosThetaO, sinThetaI, sinThetaO, v[pMax]) * ap[pMax] /
+    //         (2.f * Pi);
     if (AbsCosTheta(wi) > 0) fsum /= AbsCosTheta(wi);
     CHECK(!std::isinf(fsum.y()) && !std::isnan(fsum.y()));
     return fsum;
