@@ -111,8 +111,8 @@ MHairNewMaterial *CreateMHairNewMaterial(const TextureParams &mp) {
                             beta_n, alpha);
 }
 MHairNewBSDF::MHairNewBSDF(Float h, Float eta, const Spectrum &sigma_a, Float beta_m,
-                     Float beta_n, Float alpha):HairBSDF(h,eta,sigma_a,beta_m,beta_n,alpha) {
-    m_sim_brdf = SingBrdf::get_Instance();
+        Float beta_n, Float alpha):HairBSDF(h,eta,sigma_a,beta_m,beta_n,alpha) {
+        m_sim_brdf = SingBrdf::get_Instance();
     }
 Spectrum MHairNewBSDF::f(const Vector3f &wo, const Vector3f &wi) const {
         // Compute hair coordinate system terms related to _wo_
@@ -138,20 +138,57 @@ Spectrum MHairNewBSDF::f(const Vector3f &wo, const Vector3f &wi) const {
     //角度を算出 θi, θo
     auto wo_theta = std::atan2(wo.x, std::sqrt(wo.y * wo.y + wo.z * wo.z));
     auto wo_ang = wo_theta * 180 / Pi;
-    int ot = std::abs(std::round(wo_ang));
+    Float ot = std::abs(wo_ang);
+    ot = ot + 90.0;
 
     auto wi_theta = std::atan2(wi.x, std::sqrt(wi.y * wi.y + wi.z * wi.z));
     auto wi_ang = wi_theta * 180 / Pi;
-    int it = std::abs(std::round(wi_ang));
-    
+    Float it = std::abs(wi_ang);
+    int x0 = floor(it);
+    int x1 = ceil(it);
 
-    if(it > 90){
-        it = it - 90;
-    }
+    int y0 = floor(ot);
+    int y1 = ceil(ot);
 
-    if(ot < 0){
-        ot = ot + 90;
-    }
+    //remain
+    Float alpha_x = it - x0;
+    Float alpha_y = ot - y0;
+
+
+        // 获取四个邻近点的颜色值
+    auto c00 = m_sim_brdf->m_data[x0][y0];
+    auto c10 = m_sim_brdf->m_data[x1][y0];
+    auto c01 = m_sim_brdf->m_data[x0][y1];
+    auto c11 = m_sim_brdf->m_data[x1][y1];
+
+
+    // 对每个通道分别进行 x 轴插值
+    Float r_x0 = (1 - alpha_x) * c00.r + alpha_x * c10.r;
+    Float r_x1 = (1 - alpha_x) * c01.r + alpha_x * c11.r;
+    Float g_x0 = (1 - alpha_x) * c00.g + alpha_x * c10.g;
+    Float g_x1 = (1 - alpha_x) * c01.g + alpha_x * c11.g;
+    Float b_x0 = (1 - alpha_x) * c00.b + alpha_x * c10.b;
+    Float b_x1 = (1 - alpha_x) * c00.b + alpha_x * c11.b;
+
+    // 对每个通道分别进行 y 轴插值，得到最终颜色值
+    Float r_final = (1 - alpha_y) * r_x0 + alpha_y * r_x1;
+    Float g_final = (1 - alpha_y) * g_x0 + alpha_y * g_x1;
+    Float b_final = (1 - alpha_y) * b_x0 + alpha_y * b_x1;
+
+    // 将结果除以10（根据你的原始代码）以得到最终结果
+    const Float crgb[3] = {r_final / 10, g_final / 10, b_final / 10};
+
+    // if(it > 90){
+    //     it = it - 90;
+    // }
+
+    // if(ot < 0){
+    //     ot = ot + 90;
+    // }
+    // it = it%90;
+    // ot = (ot-90+180)%180;
+
+    //std::cout<<"it:"<<it<<" ot:"<<ot<<std::endl;
     // // use angle in azimuthal
     // int phiI_ang = static_cast<int>(std::abs((std ::round( phiI * 180 / Pi))));
     // int phiO_ang = static_cast<int>(std::abs((std ::round(phiO * 180 / Pi))));
@@ -182,8 +219,9 @@ Spectrum MHairNewBSDF::f(const Vector3f &wo, const Vector3f &wi) const {
     cosThetaOp = cosThetaO * cos2kAlpha[1] + sinThetaO * sin2kAlpha[1];
     //compute p =0 
     //fsum += Mp(cosThetaI, cosThetaOp, sinThetaI, sinThetaOp, v[0]) * ap[0]*RN.ToRGBSpectrum();
-    auto rgb = m_sim_brdf->m_data[it][ot];
-    const Float crgb[3] = {rgb.r, rgb.g, rgb.b};
+
+
+    //std::cout<<rgb.r<< rgb.g<< rgb.b<<std::endl;
     RGBSpectrum reflect = RGBSpectrum::FromRGB(crgb);
     fsum += reflect;
     // // p >=1
@@ -244,20 +282,40 @@ void MHairNewMaterial::ComputeScatteringFunctions(SurfaceInteraction *si,
     
 }
 hairSimBrdf::hairSimBrdf(const char *file) {
-    m_data = std::vector<std::vector<RGB>>(91,std::vector<RGB>(180));
+    m_data = std::vector<std::vector<RGB>>(91,std::vector<RGB>(181));
     //read from file
     std::ifstream infile(file);
     if(!infile.is_open()){
         std::cout<<"can't open file:"<<file<<std::endl;
     }
-    float a,b,c;
+    float a=0.1,b=0,c=0;
     int indeg = 0;
     int outdeg = 0;
-    while(infile >> a>>b>>c){
-        if(a==0){
+    std::string line;
+    while(std::getline(infile,line)){
+        if(line == "save successed"){
+                break;
+            }
+        if(std::abs(a)<1e-9){
             indeg++;
             outdeg = 0;
         }
+        std::istringstream ss(line);
+        std::string temp;
+        if (std::getline(ss, temp, ',')) {
+            
+            std::stringstream tempStream(temp);
+            tempStream >> a;
+        }
+        if (std::getline(ss, temp, ',')) {
+            std::stringstream tempStream(temp);
+            tempStream >> b;
+        }
+        if (std::getline(ss, temp, ',')) {
+            std::stringstream tempStream(temp);
+            tempStream >> c;
+        }
+
         m_data[indeg][outdeg].r = a;
         m_data[indeg][outdeg].g = b;
         m_data[indeg][outdeg].b = c;
