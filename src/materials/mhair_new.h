@@ -79,7 +79,7 @@ class SingBrdf{
       std::lock_guard<std::mutex> lk(m_mutex);
       if(m_instance_ptr==nullptr){
         m_instance_ptr = std::shared_ptr<hairSimBrdf>(
-          new hairSimBrdf("../table/Colordata_normal.txt"));      
+          new hairSimBrdf("../table/HairModel/incidenceLayer/(10nm,800cell)/TM/Ns/Reflection/"));      
       }
     }
     return m_instance_ptr;

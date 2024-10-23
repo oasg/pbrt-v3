@@ -44,7 +44,7 @@
 #include "spectrum.h"
 #include "texture.h"
 #include "textures/constant.h"
-#include"../table/brdf_c5.h" //キューティクル多層
+//#include"../table/brdf_c5.h" //キューティクル多層
 //#include"../table/brdf_nc5.h" //キューティクルなし
 //#include"../tablebrdf_hk5.h" //キューティクル剥落
 //#include"../table/brdf_ck5.h"//キューティクル欠け
@@ -144,6 +144,8 @@ Spectrum MHairNewBSDF::f(const Vector3f &wo, const Vector3f &wi) const {
     auto wi_theta = std::atan2(wi.x, std::sqrt(wi.y * wi.y + wi.z * wi.z));
     auto wi_ang = wi_theta * 180 / Pi;
     Float it = std::abs(wi_ang);
+    it = 90.0-it;
+
     int x0 = floor(it);
     int x1 = ceil(it);
 
@@ -176,7 +178,7 @@ Spectrum MHairNewBSDF::f(const Vector3f &wo, const Vector3f &wi) const {
     Float b_final = (1 - alpha_y) * b_x0 + alpha_y * b_x1;
 
     // 将结果除以10（根据你的原始代码）以得到最终结果
-    const Float crgb[3] = {r_final / 10, g_final / 10, b_final / 10};
+    const Float crgb[3] = {r_final , g_final , b_final };
 
     // if(it > 90){
     //     it = it - 90;
@@ -283,44 +285,45 @@ void MHairNewMaterial::ComputeScatteringFunctions(SurfaceInteraction *si,
 }
 hairSimBrdf::hairSimBrdf(const char *file) {
     m_data = std::vector<std::vector<RGB>>(91,std::vector<RGB>(181));
-    //read from file
-    std::ifstream infile(file);
-    if(!infile.is_open()){
-        std::cout<<"can't open file:"<<file<<std::endl;
-    }
-    float a=0.1,b=0,c=0;
-    int indeg = 0;
-    int outdeg = 0;
-    std::string line;
-    while(std::getline(infile,line)){
-        if(line == "save successed"){
-                break;
-            }
-        if(std::abs(a)<1e-9){
-            indeg++;
-            outdeg = 0;
-        }
-        std::istringstream ss(line);
-        std::string temp;
-        if (std::getline(ss, temp, ',')) {
-            
-            std::stringstream tempStream(temp);
-            tempStream >> a;
-        }
-        if (std::getline(ss, temp, ',')) {
-            std::stringstream tempStream(temp);
-            tempStream >> b;
-        }
-        if (std::getline(ss, temp, ',')) {
-            std::stringstream tempStream(temp);
-            tempStream >> c;
-        }
+    std::vector<std::vector<std::vector<double>>> data(91,std::vector<std::vector<double>>(181,std::vector<double>(60)));
+    for (int a = 0; a < 91; a++) {
+        // 内层循环遍历波长
+        for (int w = 400; w <= 700; w+=5) {
+            // 构造文件名
+            std::string filename = std::string(file)+"(WL=" + std::to_string(w) + "nm,AOI=" + std::to_string(-a) + "deg).txt";
+            std::ifstream file(filename);
 
-        m_data[indeg][outdeg].r = a;
-        m_data[indeg][outdeg].g = b;
-        m_data[indeg][outdeg].b = c;
-        outdeg++;
+            // 检查文件是否成功打开
+            if (!file.is_open()) {
+                std::cerr << "无法打开文件: " << filename << std::endl;
+                continue; // 跳过当前文件，继续下一个
+            }
+
+            double number;
+            // 逐行读取文件内容
+            int i = 0;
+            while (file >> number) {
+                data[a][i][(w-400)/5]=number;
+                i++;
+            }
+            // 关闭文件
+            file.close();
+        }
     }
+
+    for(int it = 0;it<91;it++){
+        for(int ot = 0;ot<181;ot++){
+            SampledSpectrum RN(0.);
+            for(int i =0;i<60;++i){
+                RN[i] = data[it][ot][i];
+                RN[i] *= SampledSpectrum::get_rgbIllum2SpectWhite()[i];
+            }
+            Float rgb[3];
+            RN.ToRGB(rgb);
+            m_data[it][ot] = {rgb[0],rgb[1],rgb[2]};
+        }
+    }
+
     std::cout<<"gen hair brdf ok!!"<<file<<std::endl;
 }
 }  
