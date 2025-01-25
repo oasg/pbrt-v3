@@ -10,3 +10,6 @@
 [submodule "src/ext/ptex"]
 	path = src/ext/ptex
 	url = https://github.com/wdas/ptex.git
+[submodule "tools/ext/glog"]
+	path = tools/ext/glog
+	url = https://github.com/google/glog.git

@@ -11,3 +11,6 @@ hair
 .vs
 cmake
 table
+tools/build
+tools/.vscode
+*.CMakeFiles

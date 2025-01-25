@@ -208,26 +208,12 @@ Spectrum MHairNewBSDF::f(const Vector3f &wo, const Vector3f &wi) const {
     Float phi = phiI - phiO;
     std::array<Spectrum, pMax + 1> ap = Ap(cosThetaO, eta, h, T);
     Spectrum fsum(0.);
-    //for p = 0
-    // samplize the table
-    // SampledSpectrum RN(0.);
-    // for(int i =0;i<60;++i){
-    //     RN[i] = BRDFTABLE5[it][ot][i] / 2.5;
-    //     RN[i] *= SampledSpectrum::get_rgbIllum2SpectWhite()[i];
-    // }
-    Float sinThetaOp, cosThetaOp;
-    // Compute $\sin \thetao$ and $\cos \thetao$ terms accounting for scales
-    sinThetaOp = sinThetaO * cos2kAlpha[1] - cosThetaO * sin2kAlpha[1];
-    cosThetaOp = cosThetaO * cos2kAlpha[1] + sinThetaO * sin2kAlpha[1];
-    //compute p =0 
-    //fsum += Mp(cosThetaI, cosThetaOp, sinThetaI, sinThetaOp, v[0]) * ap[0]*RN.ToRGBSpectrum();
-
-
     //std::cout<<rgb.r<< rgb.g<< rgb.b<<std::endl;
     RGBSpectrum reflect = RGBSpectrum::FromRGB(crgb);
-    fsum += reflect;
-    // // p >=1
+    fsum = reflect;
+    // // // p >=1
     // for (int p = 1; p < pMax; ++p) {
+    //     Float sinThetaOp, cosThetaOp;
     //     // Handle remainder of $p$ values for hair scale tilt
     //     if (p == 1) {
     //         sinThetaOp = sinThetaO * cos2kAlpha[0] + cosThetaO * sin2kAlpha[0];
@@ -244,12 +230,14 @@ Spectrum MHairNewBSDF::f(const Vector3f &wo, const Vector3f &wi) const {
     //     cosThetaOp = std::abs(cosThetaOp);
     //     fsum += Mp(cosThetaI, cosThetaOp, sinThetaI, sinThetaOp, v[p]) * ap[p] *
     //             Np(phi, p, s, gammaO, gammaT);
+        
     // }
 
     // // Compute contribution of remaining terms after _pMax_
     // fsum += Mp(cosThetaI, cosThetaO, sinThetaI, sinThetaO, v[pMax]) * ap[pMax] /
     //         (2.f * Pi);
     // if (AbsCosTheta(wi) > 0) fsum /= AbsCosTheta(wi);
+
     // CHECK(!std::isinf(fsum.y()) && !std::isnan(fsum.y()));
     return fsum;
 }

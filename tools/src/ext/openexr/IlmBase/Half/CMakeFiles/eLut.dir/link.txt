@@ -1,0 +1,1 @@
+/usr/bin/c++  -std=gnu++11 -Wno-conversion-null -Wno-unused-result -Wno-deprecated -O3 -DNDEBUG -rdynamic CMakeFiles/eLut.dir/eLut.cpp.o -o eLut 
