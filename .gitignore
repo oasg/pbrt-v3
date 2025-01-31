@@ -14,4 +14,4 @@ cmake
 table
 tools/build
 tools/.vscode
-tools/src/ext/glog/CMakeFiles
+**/CMakeFiles
