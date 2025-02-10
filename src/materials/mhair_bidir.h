@@ -77,7 +77,7 @@ class SingBiBrdf{
       std::lock_guard<std::mutex> lk(m_mutex);
       if(m_instance_ptr==nullptr){
         m_instance_ptr = std::shared_ptr<hairSimBiBrdf>(
-          new hairSimBiBrdf("../table/HairMultilayerPerlinModel/incidenceLayer/(10nm,800cell)/TM/Ns/Reflection/","../table/HairMultilayerLongitudinalModel/incidenceLayer/(10nm,1200cell)/TM/Ns/Reflection/"));
+          new hairSimBiBrdf("../table/HairMultilayerPerlinModel/incidenceLayer/(10nm,800cell)/TM/Ns/Reflection/","../table/HairModel/incidenceLayer/(10nm,800cell)/TM/Ns/Reflection/"));
       }
     }
     return m_instance_ptr;

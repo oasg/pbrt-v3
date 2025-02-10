@@ -147,6 +147,7 @@ MHairNewBiBSDF::MHairNewBiBSDF(Float h, Float eta, const Spectrum &sigma_a, Floa
     }
 Spectrum MHairNewBiBSDF::f(const Vector3f &wo, const Vector3f &wi) const {
         // Compute hair coordinate system terms related to _wo_
+    
     Float sinThetaO = wo.x;
     Float cosThetaO = SafeSqrt(1 - Sqr(sinThetaO));
     Float phiO = std::atan2(wo.z, wo.y);
@@ -166,29 +167,16 @@ Spectrum MHairNewBiBSDF::f(const Vector3f &wo, const Vector3f &wi) const {
     Float cosGammaT = SafeSqrt(1 - Sqr(sinGammaT));
     Float gammaT = SafeASin(sinGammaT);
 
-
-
-
-    //角度を算出 θi, θo
-    auto wo_theta = std::atan2(wo.x, std::sqrt(wo.y * wo.y + wo.z * wo.z));
-    auto wo_ang = wo_theta * 180 / Pi;
-    Float ot = std::abs(wo_ang);
-    ot = ot + 90.0;
-
-    auto wi_theta = std::atan2(wi.x, std::sqrt(wi.y * wi.y + wi.z * wi.z));
-    auto wi_ang = wi_theta * 180 / Pi;
-    Float it = std::abs(wi_ang);
-    it = 90.0-it;
-
     auto phi_in = std::abs(phiI * 180 /Pi);
-    phi_in = 90.0-phi_in;
+    if(phi_in > 90.0){
+        phi_in-=90.0;
+    }
+    auto phi_out =std::abs(phiO*180/Pi);
 
-    auto phi_out = std::abs(phiO*180/Pi);
-    phi_out = phi_out+90.0;
 
-    auto theta_in = std::asin(sinThetaI);
+    auto theta_in = std::abs(std::asin(sinThetaI));
     theta_in = theta_in*180/Pi;
-    auto theta_out = std::asin(sinThetaO);
+    auto theta_out = std::abs(std::asin(sinThetaO));
     theta_out = theta_out*180/Pi;
 
     // 将结果除以10（根据你的原始代码）以得到最终结果
@@ -198,27 +186,6 @@ Spectrum MHairNewBiBSDF::f(const Vector3f &wo, const Vector3f &wi) const {
     const Float crgb[3] = {resa.r*0.5+resl.r*0.5 ,
         resa.g*0.5+resl.g*0.5, 
         resa.g*0.5+resl.g*0.5};
-
-    // if(it > 90){
-    //     it = it - 90;
-    // }
-
-    // if(ot < 0){
-    //     ot = ot + 90;
-    // }
-    // it = it%90;
-    // ot = (ot-90+180)%180;
-
-    //std::cout<<"it:"<<it<<" ot:"<<ot<<std::endl;
-    // // use angle in azimuthal
-    // int phiI_ang = static_cast<int>(std::abs((std ::round( phiI * 180 / Pi))));
-    // int phiO_ang = static_cast<int>(std::abs((std ::round(phiO * 180 / Pi))));
-    // if (phiI_ang > 90) {
-    //     phiI_ang = phiI_ang - 90;
-    // }
-    // if (phiO_ang < 0) {
-    //     phiO_ang = phiO_ang + 90;
-    // }
 
     // Compute the transmittance _T_ of a single path through the cylinder
     Spectrum T = Exp(-sigma_a * (2 * cosGammaT / cosThetaT));
@@ -230,34 +197,9 @@ Spectrum MHairNewBiBSDF::f(const Vector3f &wo, const Vector3f &wi) const {
     //std::cout<<rgb.r<< rgb.g<< rgb.b<<std::endl;
     RGBSpectrum reflect = RGBSpectrum::FromRGB(crgb);
     fsum = reflect;
-    // // // p >=1
-    // for (int p = 1; p < pMax; ++p) {
-    //     Float sinThetaOp, cosThetaOp;
-    //     // Handle remainder of $p$ values for hair scale tilt
-    //     if (p == 1) {
-    //         sinThetaOp = sinThetaO * cos2kAlpha[0] + cosThetaO * sin2kAlpha[0];
-    //         cosThetaOp = cosThetaO * cos2kAlpha[0] - sinThetaO * sin2kAlpha[0];
-    //     } else if (p == 2) {
-    //         sinThetaOp = sinThetaO * cos2kAlpha[2] + cosThetaO * sin2kAlpha[2];
-    //         cosThetaOp = cosThetaO * cos2kAlpha[2] - sinThetaO * sin2kAlpha[2];
-    //     } else {
-    //         sinThetaOp = sinThetaO;
-    //         cosThetaOp = cosThetaO;
-    //     }
+    if (AbsCosTheta(wi) > 0) fsum /= AbsCosTheta(wi);
 
-    //     // Handle out-of-range $\cos \thetao$ from scale adjustment
-    //     cosThetaOp = std::abs(cosThetaOp);
-    //     fsum += Mp(cosThetaI, cosThetaOp, sinThetaI, sinThetaOp, v[p]) * ap[p] *
-    //             Np(phi, p, s, gammaO, gammaT);
-        
-    // }
-
-    // // Compute contribution of remaining terms after _pMax_
-    // fsum += Mp(cosThetaI, cosThetaO, sinThetaI, sinThetaO, v[pMax]) * ap[pMax] /
-    //         (2.f * Pi);
-    // if (AbsCosTheta(wi) > 0) fsum /= AbsCosTheta(wi);
-
-    // CHECK(!std::isinf(fsum.y()) && !std::isnan(fsum.y()));
+    CHECK(!std::isinf(fsum.y()) && !std::isnan(fsum.y()));
     return fsum;
 }
 void MHairNewBiMaterial::ComputeScatteringFunctions(SurfaceInteraction *si,
