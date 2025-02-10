@@ -118,6 +118,7 @@
 //my own material
 #include"materials/mhair.h"
 #include"materials/mhair_new.h"
+#include"materials/mhair_bidir.h"
 
 #include <map>
 #include <stdio.h>
@@ -594,6 +595,8 @@ std::shared_ptr<Material> MakeMaterial(const std::string &name,
         material = CreateMHairMaterial(mp);
     }else if(name == "mhair_new"){
         material = CreateMHairNewMaterial(mp);
+    }else if(name == "mhair_bidir"){
+        material = CreateMHairNewBiMaterial(mp);
     }
     else {
         Warning("Material \"%s\" unknown. Using \"matte\".", name.c_str());

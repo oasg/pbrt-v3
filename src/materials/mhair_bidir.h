@@ -42,8 +42,8 @@ http://pbrt.org/hair.pdf for a description of the implementation here.
 #pragma once
 #endif
 
-#ifndef PBRT_MATERIALS_MHAIR_NEW_H
-#define PBRT_MATERIALS_MHAIR_NEW_H
+#ifndef PBRT_MATERIALS_MHAIRBI_NEW_H
+#define PBRT_MATERIALS_MHAIRBI_NEW_H
 
 // materials/hair.h*
 #include "material.h"
@@ -55,39 +55,35 @@ http://pbrt.org/hair.pdf for a description of the implementation here.
 #include "hair.h"
 
 namespace pbrt {
-
-class hairSimBrdf{
+class hairSimBiBrdf{
   public:
-    hairSimBrdf(const char* file);
-    ~hairSimBrdf(){}
-    Float getReflect(Float it, Float ot);
-    std::vector<std::vector<RGB>> m_data;
+    hairSimBiBrdf(const char* fileazi,const char* filelong);
+    ~hairSimBiBrdf(){}
+    Float getReflectA(Float it, Float ot);
+    Float getReflectL(Float it, Float ot);
+    std::vector<std::vector<RGB>> m_data_a;
+    std::vector<std::vector<RGB>> m_data_l;
 };
-class SingBrdf{
+
+class SingBiBrdf{
   public:
-  ~SingBrdf(){
+  ~SingBiBrdf(){
     std::cout<<"sim Brdf destructor!"<<std::endl;
   }
-  SingBrdf() = delete;
-  SingBrdf& operator=(const SingBrdf&)= delete;
-  static std::shared_ptr<hairSimBrdf> get_Instance(){
+  SingBiBrdf() = delete;
+  SingBiBrdf& operator=(const SingBiBrdf&)= delete;
+  static std::shared_ptr<hairSimBiBrdf> get_Instance(){
     if(m_instance_ptr==nullptr){
       std::lock_guard<std::mutex> lk(m_mutex);
       if(m_instance_ptr==nullptr){
-        m_instance_ptr = std::shared_ptr<hairSimBrdf>(
-          //new hairSimBrdf("../table/HairDamagedModel/incidenceLayer/(10nm,800cell)/TM/Ns/Reflection/")); 
-          //new hairSimBrdf("../table/HairModel/incidenceLayer/(10nm,800cell)/TM/Ns/Reflection/"));   
-          //new hairSimBrdf("../table/HairDamagedModelLargeDis2/incidenceLayer/(10nm,800cell)/TM/Ns/Reflection/"));   
-          new hairSimBrdf("../table/HairMultilayerPerlinModel/incidenceLayer/(10nm,800cell)/TM/Ns/Reflection/"));
-          //new hairSimBrdf("../table/HairDamagedModelLargeDisPerlin/incidenceLayer/(10nm,800cell)/TM/Ns/Reflection/"));
-          //new hairSimBrdf("../table/HairRepairedModelLargeDis/incidenceLayer/(10nm,800cell)/TM/Ns/Reflection/"));
-          // new hairSimBrdf("../table/HairRepairedModelLargeDisPerlin/incidenceLayer/(10nm,800cell)/TM/Ns/Reflection/"));
+        m_instance_ptr = std::shared_ptr<hairSimBiBrdf>(
+          new hairSimBiBrdf("../table/HairMultilayerPerlinModel/incidenceLayer/(10nm,800cell)/TM/Ns/Reflection/","../table/HairMultilayerLongitudinalModel/incidenceLayer/(10nm,1200cell)/TM/Ns/Reflection/"));
       }
     }
     return m_instance_ptr;
   }
   private:
-    static std::shared_ptr<hairSimBrdf> m_instance_ptr;
+    static std::shared_ptr<hairSimBiBrdf> m_instance_ptr;
     static std::mutex m_mutex;
     
 };
@@ -95,10 +91,10 @@ class SingBrdf{
 
 
 // MHairMaterial Declarations
-class MHairNewMaterial : public HairMaterial {
+class MHairNewBiMaterial : public HairMaterial {
   public:
     // MHairMaterial Public Methods
-    MHairNewMaterial(const std::shared_ptr<Texture<Spectrum>> &sigma_a,
+    MHairNewBiMaterial(const std::shared_ptr<Texture<Spectrum>> &sigma_a,
                  const std::shared_ptr<Texture<Spectrum>> &color,
                  const std::shared_ptr<Texture<Float>> &eumelanin,
                  const std::shared_ptr<Texture<Float>> &pheomelanin,
@@ -115,20 +111,20 @@ class MHairNewMaterial : public HairMaterial {
 
 };
 
-MHairNewMaterial *CreateMHairNewMaterial(const TextureParams &mp);
+MHairNewBiMaterial *CreateMHairNewBiMaterial(const TextureParams &mp);
 
 // HairBSDF Declarations
-class MHairNewBSDF : public HairBSDF {
+class MHairNewBiBSDF : public HairBSDF {
   public:
     // HairBSDF Public Methods
     // just need the f function
     // pdf and sampled function are inherited
-    MHairNewBSDF(Float h, Float eta, const Spectrum &sigma_a, Float beta_m,
+    MHairNewBiBSDF(Float h, Float eta, const Spectrum &sigma_a, Float beta_m,
              Float beta_n, Float alpha);
     Spectrum f(const Vector3f &wo, const Vector3f &wi) const;
 
   private:
-    std::shared_ptr<hairSimBrdf> m_sim_brdf;
+    std::shared_ptr<hairSimBiBrdf> m_sim_brdf;
     // MHairBSDF Private data
 
 };

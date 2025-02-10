@@ -52,7 +52,10 @@ http://pbrt.org/hair.pdf for a description of the implementation here.
 #include <array>
 #include "hair.h"
 
+
 namespace pbrt {
+
+
 // MHairMaterial Declarations
 class MHairMaterial : public HairMaterial {
   public:

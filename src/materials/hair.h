@@ -53,7 +53,11 @@ http://pbrt.org/hair.pdf for a description of the implementation here.
 
 namespace pbrt {
 
-
+    struct RGB {
+        Float r;
+        Float g;
+        Float b;
+    };
 // HairMaterial Declarations
 class HairMaterial : public Material {
   public:
