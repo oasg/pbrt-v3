@@ -58,7 +58,7 @@ namespace pbrt {
 
 class hairSimBrdf{
   public:
-    hairSimBrdf(const char* file);
+    hairSimBrdf(std::string file);
     ~hairSimBrdf(){}
     Float getReflect(Float it, Float ot);
     std::vector<std::vector<RGB>> m_data;
@@ -70,18 +70,16 @@ class SingBrdf{
   }
   SingBrdf() = delete;
   SingBrdf& operator=(const SingBrdf&)= delete;
+  static void init(std::string cfilepath){
+    filepath = cfilepath;
+  }
   static std::shared_ptr<hairSimBrdf> get_Instance(){
     if(m_instance_ptr==nullptr){
       std::lock_guard<std::mutex> lk(m_mutex);
       if(m_instance_ptr==nullptr){
-        m_instance_ptr = std::shared_ptr<hairSimBrdf>(
-          //new hairSimBrdf("../table/HairDamagedModel/incidenceLayer/(10nm,800cell)/TM/Ns/Reflection/")); 
-          //new hairSimBrdf("../table/HairModel/incidenceLayer/(10nm,800cell)/TM/Ns/Reflection/"));   
-          //new hairSimBrdf("../table/HairDamagedModelLargeDis2/incidenceLayer/(10nm,800cell)/TM/Ns/Reflection/"));   
-          new hairSimBrdf("../table/HairMultilayerPerlinModel/incidenceLayer/(10nm,800cell)/TM/Ns/Reflection/"));
-          //new hairSimBrdf("../table/HairDamagedModelLargeDisPerlin/incidenceLayer/(10nm,800cell)/TM/Ns/Reflection/"));
-          //new hairSimBrdf("../table/HairRepairedModelLargeDis/incidenceLayer/(10nm,800cell)/TM/Ns/Reflection/"));
-          // new hairSimBrdf("../table/HairRepairedModelLargeDisPerlin/incidenceLayer/(10nm,800cell)/TM/Ns/Reflection/"));
+        m_instance_ptr = std::make_shared<hairSimBrdf>(
+          filepath
+          );
       }
     }
     return m_instance_ptr;
@@ -89,6 +87,7 @@ class SingBrdf{
   private:
     static std::shared_ptr<hairSimBrdf> m_instance_ptr;
     static std::mutex m_mutex;
+    static std::string filepath;
     
 };
 

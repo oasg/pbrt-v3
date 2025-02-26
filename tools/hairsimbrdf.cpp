@@ -39,7 +39,8 @@ hairSimBrdf::hairSimBrdf(const char *file) {
                 RN[i] = data[it][ot][i];
                 RN[i] *= pbrt::SampledSpectrum::get_rgbIllum2SpectWhite()[i];
             }
-            Float rgb[3];
+            //RN *= (1.0f / RN.MaxComponentValue());
+            Float rgb[3]={0.0,0.0,0.0};
             RN.ToRGB(rgb);
             m_data[it][ot] = {rgb[0],rgb[1],rgb[2]};
         }

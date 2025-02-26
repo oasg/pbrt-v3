@@ -29,12 +29,14 @@ class SingBrdf{
       if(m_instance_ptr==nullptr){
         m_instance_ptr = std::shared_ptr<hairSimBrdf>(
           // new hairSimBrdf("../../table/HairDamagedModel/incidenceLayer/(10nm,800cell)/TM/Ns/Reflection/")); 
-          new hairSimBrdf("../../table/HairModel/incidenceLayer/(10nm,800cell)/TM/Ns/Reflection/"));   
+          //new hairSimBrdf("../../table/HairModel/incidenceLayer/(10nm,800cell)/TM/Ns/Reflection/"));   
           // new hairSimBrdf("../../table/HairDamagedModelLargeDis/incidenceLayer/(10nm,800cell)/TM/Ns/Reflection/"));   
           // new hairSimBrdf("../../table/HairMultilayerPerlinModel/incidenceLayer/(10nm,800cell)/TM/Ns/Reflection/"));
           // new hairSimBrdf("../../table/HairDamagedModelLargeDisPerlin/incidenceLayer/(10nm,800cell)/TM/Ns/Reflection/"));
           // new hairSimBrdf("../../table/HairRepairedModelLargeDis/incidenceLayer/(10nm,800cell)/TM/Ns/Reflection/"));
           // new hairSimBrdf("../../table/HairRepairedModelLargeDisPerlin/incidenceLayer/(10nm,800cell)/TM/Ns/Reflection/"));
+          new hairSimBrdf("../../table/HairMultilayerDamagedLackLayerModel/incidenceLayer/(10nm,800cell)/TM/Ns/Reflection/"));
+          //new hairSimBrdf("../../table/HairMultilayerDamagedTiltModel/incidenceLayer/(10nm,1200cell)/TM/Ns/Reflection/"));
       }
     }
     return m_instance_ptr;

@@ -594,6 +594,7 @@ std::shared_ptr<Material> MakeMaterial(const std::string &name,
     else if(name == "mhair"){
         material = CreateMHairMaterial(mp);
     }else if(name == "mhair_new"){
+        
         material = CreateMHairNewMaterial(mp);
     }else if(name == "mhair_bidir"){
         material = CreateMHairNewBiMaterial(mp);
@@ -706,6 +707,7 @@ std::shared_ptr<Medium> MakeMedium(const std::string &name,
     Float g = paramSet.FindOneFloat("g", 0.0f);
     sig_a = paramSet.FindOneSpectrum("sigma_a", sig_a) * scale;
     sig_s = paramSet.FindOneSpectrum("sigma_s", sig_s) * scale;
+    
     Medium *m = NULL;
     if (name == "homogeneous") {
         m = new HomogeneousMedium(sig_a, sig_s, g);
