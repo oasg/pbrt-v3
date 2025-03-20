@@ -15,3 +15,4 @@ table
 tools/build
 tools/.vscode
 tools/src/ext
+batch/straight-*
